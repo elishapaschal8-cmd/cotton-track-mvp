@@ -4,7 +4,10 @@ import sqlite3 from 'sqlite3';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const dbPath = path.join(__dirname, 'data', 'cotton_track.db');
+const defaultDbPath = path.join(__dirname, 'data', 'cotton_track.db');
+const dbPath = process.env.COTTON_TRACK_DB_PATH
+  ? path.resolve(process.env.COTTON_TRACK_DB_PATH)
+  : defaultDbPath;
 
 sqlite3.verbose();
 

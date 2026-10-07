@@ -421,7 +421,7 @@ async function startServer(port = Number(process.env.PORT || 3000)) {
   await initializeDatabase();
 
   return new Promise((resolve) => {
-    const server = app.listen(port, () => {
+    const server = app.listen(port, '0.0.0.0', () => {
       resolve(server);
     });
   });

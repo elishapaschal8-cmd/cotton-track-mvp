@@ -1,7 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs/promises';
+import path from 'node:path';
 
+const testDbPath = path.join(process.cwd(), 'data', 'cotton_track_test.db');
+await fs.rm(testDbPath, { force: true });
 process.env.COTTON_TRACK_SMS_MODE = 'sandbox';
+process.env.COTTON_TRACK_DB_PATH = testDbPath;
 
 const { startServer, generateTransactionRef, getTanzaniaDateStamp } = await import('../server.js');
 
