@@ -1,5 +1,6 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { mkdirSync } from 'node:fs';
 import sqlite3 from 'sqlite3';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -8,6 +9,8 @@ const defaultDbPath = path.join(__dirname, 'data', 'cotton_track.db');
 const dbPath = process.env.COTTON_TRACK_DB_PATH
   ? path.resolve(process.env.COTTON_TRACK_DB_PATH)
   : defaultDbPath;
+
+mkdirSync(path.dirname(dbPath), { recursive: true });
 
 sqlite3.verbose();
 
