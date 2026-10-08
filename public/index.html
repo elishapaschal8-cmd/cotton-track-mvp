@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body class="bg-slate-100 text-slate-900 antialiased">
-    <div class="mx-auto min-h-screen max-w-md bg-white shadow-sm ring-1 ring-slate-200">
+    <div id="app-shell" class="mx-auto min-h-screen max-w-md bg-white shadow-sm ring-1 ring-slate-200">
       <header class="border-b border-slate-200 bg-emerald-700 px-4 py-4 text-white">
         <div class="flex items-center justify-between">
           <div>
@@ -175,17 +175,57 @@
         </section>
 
         <section id="success-screen" class="screen hidden">
-          <div class="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-center">
-            <div class="mb-4 inline-flex h-14 w-14 items-center justify-center rounded-full bg-emerald-600 text-2xl text-white">✓</div>
-            <h2 class="text-2xl font-bold text-emerald-900">Transaction saved</h2>
-            <p id="success-reference" class="mt-2 text-sm text-emerald-700">Reference: --</p>
-            <p id="success-total" class="mt-2 text-3xl font-bold text-emerald-900">TZS 0</p>
-            <p id="success-sms" class="mt-3 text-sm text-emerald-700">SMS status: --</p>
+          <div id="success-summary" class="success-summary">
+            <span class="success-check" aria-hidden="true">✓</span>
+            <div>
+              <p class="success-eyebrow">SUCCESS</p>
+              <h2>Transaction saved</h2>
+            </div>
           </div>
 
-          <div class="mt-5 flex gap-3">
-            <button type="button" id="done-button" class="primary-button flex-1">Done</button>
-            <button type="button" id="success-history-button" class="secondary-button flex-1">View History</button>
+          <article id="print-receipt" class="receipt-card hidden" aria-label="Cotton purchase receipt">
+            <header class="receipt-brand">
+              <p class="receipt-wordmark">COTTON TRACK</p>
+              <h3>Cotton Purchase Receipt</h3>
+              <p class="receipt-reference-label">Transaction Ref</p>
+              <p id="receipt-reference" class="receipt-reference"></p>
+            </header>
+
+            <section class="receipt-section" aria-label="Farmer details">
+              <div class="receipt-field"><span>Farmer</span><strong id="receipt-farmer-name"></strong></div>
+              <div class="receipt-field"><span>Phone</span><strong id="receipt-farmer-phone"></strong></div>
+              <div class="receipt-field"><span>Buying Center</span><strong id="receipt-buying-center"></strong></div>
+              <div class="receipt-field receipt-datetime">
+                <span>Date &amp; Time</span>
+                <strong><span id="receipt-date"></span><span aria-hidden="true">, </span><span id="receipt-time"></span></strong>
+              </div>
+            </section>
+
+            <section class="receipt-section receipt-transaction" aria-label="Transaction details">
+              <div class="receipt-field"><span>Weight</span><strong id="receipt-weight"></strong></div>
+              <div class="receipt-field"><span>Weight Source</span><strong id="receipt-weight-source"></strong></div>
+              <div class="receipt-field"><span>Price per KG</span><strong id="receipt-price"></strong></div>
+            </section>
+
+            <section class="receipt-total-card" aria-label="Saved total amount">
+              <span>TOTAL AMOUNT</span>
+              <strong id="receipt-total"></strong>
+            </section>
+
+            <footer class="receipt-foot">
+              <span>SMS</span>
+              <strong id="receipt-sms-status" class="receipt-status"></strong>
+              <p>Thank you for your business.</p>
+            </footer>
+          </article>
+
+          <div id="success-actions" class="success-actions">
+            <button type="button" id="download-receipt-button" class="primary-button w-full">Download Receipt</button>
+            <button type="button" id="print-receipt-button" class="secondary-button w-full">Print Receipt</button>
+            <div class="success-secondary-actions">
+              <button type="button" id="done-button" class="secondary-button flex-1">Start New Transaction</button>
+              <button type="button" id="success-history-button" class="secondary-button flex-1">View History</button>
+            </div>
           </div>
         </section>
 
@@ -210,6 +250,7 @@
       </main>
     </div>
 
+    <script src="/vendor/jspdf.umd.min.js"></script>
     <script src="/app.js"></script>
   </body>
 </html>

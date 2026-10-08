@@ -60,9 +60,20 @@ const elements = {
   confirmTotal: document.getElementById('confirm-total'),
   confirmButton: document.getElementById('confirm-button'),
   confirmationError: document.getElementById('confirmation-error'),
-  successReference: document.getElementById('success-reference'),
-  successTotal: document.getElementById('success-total'),
-  successSms: document.getElementById('success-sms'),
+  printReceipt: document.getElementById('print-receipt'),
+  receiptReference: document.getElementById('receipt-reference'),
+  receiptDate: document.getElementById('receipt-date'),
+  receiptTime: document.getElementById('receipt-time'),
+  receiptFarmerName: document.getElementById('receipt-farmer-name'),
+  receiptFarmerPhone: document.getElementById('receipt-farmer-phone'),
+  receiptBuyingCenter: document.getElementById('receipt-buying-center'),
+  receiptWeight: document.getElementById('receipt-weight'),
+  receiptWeightSource: document.getElementById('receipt-weight-source'),
+  receiptPrice: document.getElementById('receipt-price'),
+  receiptTotal: document.getElementById('receipt-total'),
+  receiptSmsStatus: document.getElementById('receipt-sms-status'),
+  downloadReceiptButton: document.getElementById('download-receipt-button'),
+  printReceiptButton: document.getElementById('print-receipt-button'),
   historyList: document.getElementById('history-list'),
   historyEmpty: document.getElementById('history-empty'),
   historyLink: document.getElementById('history-link')
@@ -93,6 +104,185 @@ function formatTanzaniaDateTime(value) {
 
 function formatCurrency(value) {
   return `TZS ${Number(value || 0).toLocaleString('en-US')}`;
+}
+
+function formatReceiptDateTime(value) {
+  const date = new Date(`${String(value).replace(' ', 'T')}Z`);
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Africa/Dar_es_Salaam',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23'
+  }).formatToParts(date);
+  const values = Object.fromEntries(parts
+    .filter((part) => part.type !== 'literal')
+    .map((part) => [part.type, part.value]));
+
+  return {
+    date: `${values.day}/${values.month}/${values.year}`,
+    time: `${values.hour}:${values.minute}`
+  };
+}
+
+function getReceiptFields(transaction) {
+  const { date, time } = formatReceiptDateTime(transaction.created_at);
+
+  return {
+    reference: transaction.transaction_ref,
+    date,
+    time,
+    farmerName: transaction.farmer_name,
+    farmerPhone: transaction.farmer_phone,
+    buyingCenter: transaction.buying_center,
+    weight: `${formatNum(transaction.weight_kg)} KG`,
+    weightSource: transaction.weight_source,
+    price: formatCurrency(transaction.price_per_kg_tzs),
+    total: formatCurrency(transaction.total_tzs),
+    smsStatus: transaction.sms_status
+  };
+}
+
+function populatePrintReceipt(transaction) {
+  const fields = getReceiptFields(transaction);
+
+  elements.receiptReference.textContent = fields.reference;
+  elements.receiptDate.textContent = fields.date;
+  elements.receiptTime.textContent = fields.time;
+  elements.receiptFarmerName.textContent = fields.farmerName;
+  elements.receiptFarmerPhone.textContent = fields.farmerPhone;
+  elements.receiptBuyingCenter.textContent = fields.buyingCenter;
+  elements.receiptWeight.textContent = fields.weight;
+  elements.receiptWeightSource.textContent = fields.weightSource;
+  elements.receiptPrice.textContent = fields.price;
+  elements.receiptTotal.textContent = fields.total;
+  elements.receiptSmsStatus.textContent = fields.smsStatus;
+  elements.printReceipt.classList.remove('hidden');
+}
+
+function downloadReceipt() {
+  if (!state.latestTransaction) {
+    return;
+  }
+
+  const { jsPDF } = window.jspdf;
+  const fields = getReceiptFields(state.latestTransaction);
+  const rows = [
+    ['Transaction Reference', fields.reference],
+    ['Date', fields.date],
+    ['Time', fields.time],
+    ['Farmer Name', fields.farmerName],
+    ['Phone', fields.farmerPhone],
+    ['Buying Center', fields.buyingCenter],
+    ['Weight', fields.weight],
+    ['Weight Source', fields.weightSource],
+    ['Price per KG', fields.price],
+    ['Total Amount', fields.total],
+    ['SMS Status', fields.smsStatus]
+  ];
+  const pageWidth = 80;
+  const margin = 5;
+  const valueWidth = pageWidth - margin * 2;
+  const measurePdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: [pageWidth, 300] });
+  const rowLayouts = rows.map(([label, value]) => {
+    const isTotal = label === 'Total Amount';
+    const valueFontSize = isTotal ? 11 : 9;
+    measurePdf.setFont('helvetica', 'bold');
+    measurePdf.setFontSize(valueFontSize);
+    const valueLines = measurePdf.splitTextToSize(String(value), valueWidth - 2);
+    const valueLineHeight = isTotal ? 4.8 : 4;
+    const rowHeight = 3 + valueLines.length * valueLineHeight + (isTotal ? 4 : 2);
+
+    return { label, isTotal, valueFontSize, valueLines, rowHeight };
+  });
+
+  let measuredY = 40;
+  for (const { rowHeight, isTotal } of rowLayouts) {
+    measuredY += rowHeight + (isTotal ? 1 : 0);
+  }
+  const footerY = measuredY + 8;
+  const pageHeight = footerY + 5;
+  const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: [pageWidth, pageHeight] });
+  let y = 11;
+
+  pdf.setProperties({ title: `Cotton Purchase Receipt ${fields.reference}` });
+  pdf.setTextColor(4, 120, 87);
+  pdf.setFont('helvetica', 'bold');
+  pdf.setFontSize(14);
+  pdf.text('COTTON TRACK', pageWidth / 2, y, { align: 'center' });
+  y += 5;
+  pdf.setTextColor(15, 23, 42);
+  pdf.setFont('helvetica', 'bold');
+  pdf.setFontSize(9.5);
+  pdf.text('Cotton Purchase Receipt', pageWidth / 2, y, { align: 'center' });
+  y += 9;
+
+  pdf.setTextColor(100, 116, 139);
+  pdf.setFont('helvetica', 'normal');
+  pdf.setFontSize(7.5);
+  pdf.text('TRANSACTION REFERENCE', pageWidth / 2, y, { align: 'center' });
+  y += 4;
+  pdf.setTextColor(6, 78, 59);
+  pdf.setFont('helvetica', 'bold');
+  pdf.setFontSize(9);
+  pdf.text(fields.reference, pageWidth / 2, y, { align: 'center' });
+  y += 6;
+
+  pdf.setDrawColor(203, 213, 225);
+  pdf.setLineWidth(0.3);
+  pdf.setLineDashPattern([1, 1], 0);
+  pdf.line(margin, y, pageWidth - margin, y);
+  pdf.setLineDashPattern([], 0);
+  y += 5;
+
+  for (const { label, isTotal, valueFontSize, valueLines, rowHeight } of rowLayouts) {
+    if (isTotal) {
+      pdf.setFillColor(236, 253, 245);
+      pdf.roundedRect(margin, y - 2, valueWidth, rowHeight, 1.5, 1.5, 'F');
+      pdf.setTextColor(6, 78, 59);
+      pdf.setFontSize(7.5);
+      pdf.text('TOTAL AMOUNT', margin + 2, y + 2);
+      pdf.setFontSize(valueFontSize);
+      pdf.text(valueLines, pageWidth - margin - 2, y + 2, { align: 'right' });
+      y += rowHeight + 1;
+    } else {
+      pdf.setTextColor(71, 85, 105);
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(7.5);
+      pdf.text(label.toUpperCase(), margin + 1, y);
+      pdf.setTextColor(30, 41, 59);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(valueFontSize);
+      pdf.text(valueLines, margin + 1, y + 3.5);
+      y += rowHeight;
+
+      pdf.setDrawColor(226, 232, 240);
+      pdf.setLineWidth(0.2);
+      pdf.line(margin, y - 1, pageWidth - margin, y - 1);
+    }
+  }
+
+  y += 2;
+  pdf.setDrawColor(203, 213, 225);
+  pdf.setLineWidth(0.3);
+  pdf.line(margin, y, pageWidth - margin, y);
+  y += 6;
+  pdf.setTextColor(71, 85, 105);
+  pdf.setFont('helvetica', 'normal');
+  pdf.setFontSize(8);
+  pdf.text('Thank you for your business.', pageWidth / 2, y, { align: 'center' });
+
+  const safeReference = String(state.latestTransaction.transaction_ref).replace(/[^A-Za-z0-9-]/g, '');
+  const blobUrl = URL.createObjectURL(pdf.output('blob'));
+  const link = document.createElement('a');
+  link.href = blobUrl;
+  link.download = `Cotton-Track-Receipt-${safeReference || 'receipt'}.pdf`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
 }
 
 function showScreen(name) {
@@ -365,10 +555,8 @@ async function saveTransaction() {
     }
 
     state.latestTransaction = data.transaction;
+    populatePrintReceipt(data.transaction);
     showScreen('success');
-    elements.successReference.textContent = `Reference: ${data.transaction.transaction_ref}`;
-    elements.successTotal.textContent = formatCurrency(data.transaction.total_tzs);
-    elements.successSms.textContent = `SMS status: ${data.transaction.sms_status}`;
     await loadHistory();
   } catch (error) {
     if (error && error.name === 'AbortError') {
@@ -457,6 +645,12 @@ document.getElementById('new-transaction-btn').addEventListener('click', () => g
 document.getElementById('history-link').addEventListener('click', () => goToHistoryScreen());
 document.getElementById('history-new-transaction').addEventListener('click', () => goToFarmerScreen());
 document.getElementById('done-button').addEventListener('click', () => openNewTransaction());
+elements.printReceiptButton.addEventListener('click', () => {
+  if (state.latestTransaction) {
+    window.print();
+  }
+});
+elements.downloadReceiptButton.addEventListener('click', downloadReceipt);
 document.getElementById('success-history-button').addEventListener('click', () => goToHistoryScreen());
 
 document.getElementById('farmer-back').addEventListener('click', () => showScreen('dashboard'));
